@@ -1,11 +1,10 @@
-name: 'Your name here'
+name: 'Action name here'
 description: 'Provide a description here'
-author: 'Your name or organization here'
+author: 'Your name here'
 inputs:
-  milliseconds: # change this
-    required: true
-    description: 'input description here'
-    default: 'default value if applicable'
+  filesystem:
+    description: 'A FAT12 filesystem to use (if given)'
+    default: ''
 runs:
   using: 'node16'
   main: 'dist/index.js'
