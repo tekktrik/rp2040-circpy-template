@@ -1,4 +1,4 @@
-import {RP2040, USBCDC} from 'rp2040js'
+import {RP2040, USBCDC, ConsoleLogger, LogLevel} from 'rp2040js'
 import {bootrom} from './bootrom'
 import {loadUF2, loadFlash} from './memory'
 import * as core from '@actions/core'
@@ -9,6 +9,7 @@ export function runMCU(
 ): void {
   // Create the MCU
   const mcu = new RP2040()
+  mcu.logger = new ConsoleLogger(LogLevel.Error)
 
   // Load the bootrom
   mcu.loadBootrom(bootrom)

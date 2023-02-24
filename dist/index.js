@@ -734,6 +734,7 @@ const core = __importStar(__nccwpck_require__(2186));
 function runMCU(uf2_filepath, fs_filepath = null) {
     // Create the MCU
     const mcu = new rp2040js_1.RP2040();
+    mcu.logger = new rp2040js_1.ConsoleLogger(rp2040js_1.LogLevel.Error);
     // Load the bootrom
     mcu.loadBootrom(bootrom_1.bootrom);
     // Load the UF2 firmware
