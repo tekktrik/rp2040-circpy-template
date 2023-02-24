@@ -827,7 +827,7 @@ const fs = __importStar(__nccwpck_require__(7147));
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const uf2 = core.getInput('uf2');
+            const uf2 = core.getInput('firmware');
             const fs_arg = core.getInput('filesystem');
             if (!fs.existsSync(uf2)) {
                 core.setFailed('UF2 file provided does not exist.');

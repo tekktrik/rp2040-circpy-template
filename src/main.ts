@@ -4,7 +4,7 @@ import * as fs from 'fs'
 
 async function run(): Promise<void> {
   try {
-    const uf2: string = core.getInput('uf2')
+    const uf2: string = core.getInput('firmware')
     const fs_arg: string = core.getInput('filesystem')
 
     if (!fs.existsSync(uf2)) {
