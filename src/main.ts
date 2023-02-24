@@ -1,13 +1,22 @@
 import * as core from '@actions/core'
-import {wait} from './wait'
+import {runMCU} from './execution'
+import * as fs from 'fs'
 
 async function run(): Promise<void> {
   try {
-    const ms: string = core.getInput('milliseconds')
-    core.debug(`Waiting ${ms} milliseconds ...`) // debug is only output if you set the secret `ACTIONS_STEP_DEBUG` to true
+    const uf2: string = core.getInput('uf2')
+    const fs_arg: string = core.getInput('filesystem')
 
-    core.debug(new Date().toTimeString())
-    await wait(parseInt(ms, 10))
+    if (!fs.existsSync(uf2)) {
+      core.setFailed('UF2 file provided does not exist.')
+    }
+    if (fs_arg !== '' && !fs.existsSync(fs_arg)) {
+      core.setFailed('Filesystem image provided does not exist.')
+    }
+    const filesystem = fs_arg === '' ? null : fs_arg
+
+    runMCU(uf2, filesystem)
+
     core.debug(new Date().toTimeString())
 
     core.setOutput('time', new Date().toTimeString())

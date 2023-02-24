@@ -1,4 +1,4 @@
-name: 'build-test'
+name: 'Build CI'
 on: # rebuild any PRs and main branch changes
   pull_request:
   push:
@@ -10,15 +10,36 @@ jobs:
   build: # make sure build/ci work properly
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - run: |
+      - name: CHeckout repo
+        uses: actions/checkout@v3
+      - name: Install dependencies
+        run: |
           npm install
-      - run: |
+      - name: Run all scripts
+        run: |
           npm run all
   test: # make sure the action works on a clean machine without building
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: ./
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Download UF2 firmware
+        run: |
+          wget https://downloads.circuitpython.org/bin/raspberry_pi_pico/en_US/adafruit-circuitpython-raspberry_pi_pico-en_US-8.0.3.uf2 -O firmware.uf2
+      - name: Create test filesystem image
+        uses: tekktrik/rp2040js-circpy-create-fs@v1
         with:
-          milliseconds: 1000
+          fs-name: fat12.img
+          input-folder: ./tests/CIRCUITPY
+      - name: Run action
+        id: action-test
+        uses: ./
+        with:
+          firmware: firmware.uf2
+          filesystem: fat12.img
+      - name: Check results of action
+        run: |
+          if [ ${{ steps.actions-test.outputs.result }} != "Hello, world!" ]; then
+            echo "Action output did not return the expected result!"
+            exit 1
+          fi

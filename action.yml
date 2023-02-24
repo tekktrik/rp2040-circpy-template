@@ -2,6 +2,9 @@ name: 'Action name here'
 description: 'Provide a description here'
 author: 'Your name here'
 inputs:
+  firmware:
+    description: 'A UF2 firmware file to load'
+    required: true
   filesystem:
     description: 'A FAT12 filesystem to use (if given)'
     default: ''
