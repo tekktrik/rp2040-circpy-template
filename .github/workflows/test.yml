@@ -31,6 +31,9 @@ jobs:
         with:
           fs-name: fat12.img
           input-folder: ./tests/CIRCUITPY
+      - name: Check directory contents
+        run: |
+          ls
       - name: Run action
         id: action-test
         uses: ./
