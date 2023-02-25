@@ -16,10 +16,6 @@ async function run(): Promise<void> {
     const filesystem = fs_arg === '' ? null : fs_arg
 
     runMCU(uf2, filesystem)
-
-    core.debug(new Date().toTimeString())
-
-    core.setOutput('time', new Date().toTimeString())
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }

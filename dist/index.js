@@ -755,12 +755,12 @@ function runMCU(uf2_filepath, fs_filepath = null) {
     };
     // Handle receiving serial data
     cdc.onSerialData = function (buffer) {
-        const data = new TextDecoder().decode(buffer);
-        for (const char of data) {
-            if (char === '\n') {
+        for (const byte of buffer) {
+            const char = String.fromCharCode(byte);
+            if (char === '\r' || char === '\n') {
                 if (currentLine === '[RP2040JS: END]') {
                     // TODO: Change this depending on the use case
-                    const printout = dataReceived.split('\n')[0];
+                    const printout = dataReceived.split('\r')[1].trim();
                     core.setOutput('result', printout);
                     process.exit(0);
                 }
@@ -838,8 +838,6 @@ function run() {
             }
             const filesystem = fs_arg === '' ? null : fs_arg;
             (0, execution_1.runMCU)(uf2, filesystem);
-            core.debug(new Date().toTimeString());
-            core.setOutput('time', new Date().toTimeString());
         }
         catch (error) {
             if (error instanceof Error)
