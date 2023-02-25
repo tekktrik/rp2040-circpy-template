@@ -2,7 +2,7 @@
   "name": "typescript-action",
   "version": "0.0.0",
   "private": true,
-  "description": "TypeScript template action",
+  "description": "TypeScript template action for using RP2040JS running CircuitPython",
   "main": "lib/main.js",
   "scripts": {
     "build": "tsc",
@@ -10,12 +10,14 @@
     "format-check": "prettier --check '**/*.ts'",
     "lint": "eslint src/**/*.ts",
     "package": "ncc build --source-map --license licenses.txt",
-    "test": "sh create-files.sh; jest",
-    "all": "npm run build && npm run format && npm run lint && npm run package && npm run test"
+    "create-files": "sh create-files.sh",
+    "test": "jest",
+    "test+": "npm run create-files && npm run test", 
+    "all": "npm run build && npm run format && npm run lint && npm run package && npm run test+"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/actions/typescript-action.git"
+    "url": "git+https://github.com/tekktrik/rp2040js-circpy-template.git"
   },
   "keywords": [
     "actions",
