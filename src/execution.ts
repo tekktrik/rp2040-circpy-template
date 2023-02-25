@@ -42,7 +42,7 @@ export function runMCU(
       if (char === '\r' || char === '\n') {
         if (currentLine === '[RP2040JS: END]') {
           // TODO: Change this depending on the use case
-          const printout = dataReceived.split('\r')[1].trim()
+          const printout = dataReceived.split('\r\n')[1].trim()
           core.setOutput('result', printout)
           process.exit(0)
         }
