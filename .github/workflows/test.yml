@@ -39,7 +39,7 @@ jobs:
           filesystem: fat12.img
       - name: Check results of action
         run: |
-          if [ ${{ steps.actions-test.outputs.result }} != "Hello, world!" ]; then
+          if [ ${{ steps.action-test.outputs.result }} != "Hello, world!" ]; then
             echo "Action output did not return the expected result!"
             exit 1
           fi
