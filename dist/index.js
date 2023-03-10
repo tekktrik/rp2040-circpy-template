@@ -9184,7 +9184,7 @@ class PWMChannel {
         // GPIO pin indices: Table 525. Mapping of PWM channels to GPIO pins on RP2040
         this.pinA1 = this.index * 2;
         this.pinB1 = this.index * 2 + 1;
-        this.pinA2 = this.index < 7 ? 16 + this.index * 2 + 1 : -1;
+        this.pinA2 = this.index < 7 ? 16 + this.index * 2 : -1;
         this.pinB2 = this.index < 7 ? 16 + this.index * 2 + 1 : -1;
         this.alarmA.enable = true;
         this.alarmB.enable = true;
