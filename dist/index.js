@@ -6485,6 +6485,98 @@ exports.RPADC = RPADC;
 
 /***/ }),
 
+/***/ 6988:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RPBUSCTRL = void 0;
+const peripheral_1 = __nccwpck_require__(4223);
+/** Bus priority acknowledge */
+const BUS_PRIORITY_ACK = 0x004;
+/** Bus fabric performance counter 0 */
+const PERFCTR0 = 0x008;
+/** Bus fabric performance event select for PERFCTR0 */
+const PERFSEL0 = 0x00c;
+/** Bus fabric performance counter 1 */
+const PERFCTR1 = 0x010;
+/** Bus fabric performance event select for PERFCTR1 */
+const PERFSEL1 = 0x014;
+/** Bus fabric performance counter 2 */
+const PERFCTR2 = 0x018;
+/** Bus fabric performance event select for PERFCTR2 */
+const PERFSEL2 = 0x01c;
+/** Bus fabric performance counter 3 */
+const PERFCTR3 = 0x020;
+/** Bus fabric performance event select for PERFCTR3 */
+const PERFSEL3 = 0x024;
+class RPBUSCTRL extends peripheral_1.BasePeripheral {
+    constructor(rp2040, name) {
+        super(rp2040, name);
+        this.voltageSelect = 0;
+        this.perfCtr = [0, 0, 0, 0];
+        this.perfSel = [0x1f, 0x1f, 0x1f, 0x1f];
+    }
+    readUint32(offset) {
+        switch (offset) {
+            case BUS_PRIORITY_ACK:
+                return 1;
+            case PERFCTR0:
+                return this.perfCtr[0];
+            case PERFSEL0:
+                return this.perfSel[0];
+            case PERFCTR1:
+                return this.perfCtr[1];
+            case PERFSEL1:
+                return this.perfSel[1];
+            case PERFCTR2:
+                return this.perfCtr[2];
+            case PERFSEL2:
+                return this.perfSel[2];
+            case PERFCTR3:
+                return this.perfCtr[3];
+            case PERFSEL3:
+                return this.perfSel[3];
+        }
+        return super.readUint32(offset);
+    }
+    writeUint32(offset, value) {
+        switch (offset) {
+            case PERFCTR0:
+                this.perfCtr[0] = 0;
+                break;
+            case PERFSEL0:
+                this.perfSel[0] = value & 0x1f;
+                break;
+            case PERFCTR1:
+                this.perfCtr[1] = 0;
+                break;
+            case PERFSEL1:
+                this.perfSel[1] = value & 0x1f;
+                break;
+            case PERFCTR2:
+                this.perfCtr[2] = 0;
+                break;
+            case PERFSEL2:
+                this.perfSel[2] = value & 0x1f;
+                break;
+            case PERFCTR3:
+                this.perfCtr[3] = 0;
+                break;
+            case PERFSEL3:
+                this.perfSel[3] = value & 0x1f;
+                break;
+            default:
+                super.writeUint32(offset, value);
+        }
+    }
+}
+exports.RPBUSCTRL = RPBUSCTRL;
+
+
+/***/ }),
+
 /***/ 2135:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -7614,10 +7706,16 @@ class RPIO extends peripheral_1.BasePeripheral {
                         pin.updateIRQValue(pinRawWriteValue);
                         break;
                     case PROC0_INTE0:
-                        pin.irqEnableMask = pinValue;
+                        if (pin.irqEnableMask !== pinValue) {
+                            pin.irqEnableMask = pinValue;
+                            this.rp2040.updateIOInterrupt();
+                        }
                         break;
                     case PROC0_INTF0:
-                        pin.irqForceMask = pinValue;
+                        if (pin.irqForceMask !== pinValue) {
+                            pin.irqForceMask = pinValue;
+                            this.rp2040.updateIOInterrupt();
+                        }
                         break;
                 }
             }
@@ -8868,6 +8966,7 @@ exports.RPPIO = RPPIO;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RPPPB = exports.SHPR3 = exports.SHPR2 = exports.VTOR = exports.ICSR = exports.CPUID = void 0;
 const irq_1 = __nccwpck_require__(679);
+const timer32_1 = __nccwpck_require__(6682);
 const peripheral_1 = __nccwpck_require__(4223);
 exports.CPUID = 0xd00;
 exports.ICSR = 0xd04;
@@ -8909,14 +9008,32 @@ const VECTACTIVE_SHIFT = 0;
  * Included peripheral: NVIC, SysTick timer
  */
 class RPPPB extends peripheral_1.BasePeripheral {
-    constructor() {
-        super(...arguments);
+    constructor(rp2040, name) {
+        super(rp2040, name);
         // Systick
         this.systickCountFlag = false;
-        this.systickControl = 0;
-        this.systickLastZero = 0;
+        this.systickClkSource = false;
+        this.systickIntEnable = false;
         this.systickReload = 0;
-        this.systickTimer = null;
+        this.systickTimer = new timer32_1.Timer32(this.rp2040.clock, this.rp2040.clkSys);
+        this.systickAlarm = new timer32_1.Timer32PeriodicAlarm(this.systickTimer, () => {
+            this.systickCountFlag = true;
+            if (this.systickIntEnable) {
+                this.rp2040.core.pendingSystick = true;
+                this.rp2040.core.interruptsUpdated = true;
+            }
+            this.systickTimer.set(this.systickReload);
+        });
+        this.systickTimer.top = 0xffffff;
+        this.systickTimer.mode = timer32_1.TimerMode.Decrement;
+        this.systickAlarm.target = 0;
+        this.systickAlarm.enable = true;
+        this.reset();
+    }
+    reset() {
+        this.writeUint32(SYST_CSR, 0);
+        this.writeUint32(SYST_RVR, 0xffffff);
+        this.systickTimer.set(0xffffff);
     }
     readUint32(offset) {
         const { rp2040 } = this;
@@ -8972,16 +9089,14 @@ class RPPPB extends peripheral_1.BasePeripheral {
             /* SysTick */
             case SYST_CSR: {
                 const countFlagValue = this.systickCountFlag ? 1 << 16 : 0;
+                const clkSourceValue = this.systickClkSource ? 1 << 2 : 0;
+                const tickIntValue = this.systickIntEnable ? 1 << 1 : 0;
+                const enableFlagValue = this.systickTimer.enable ? 1 << 0 : 0;
                 this.systickCountFlag = false;
-                return countFlagValue | (this.systickControl & 0x7);
+                return countFlagValue | clkSourceValue | tickIntValue | enableFlagValue;
             }
-            case SYST_CVR: {
-                const delta = (rp2040.clock.micros - this.systickLastZero) % (this.systickReload + 1);
-                if (!delta) {
-                    return 0;
-                }
-                return this.systickReload - (delta - 1);
-            }
+            case SYST_CVR:
+                return this.systickTimer.counter;
             case SYST_RVR:
                 return this.systickReload;
             case SYST_CALIB:
@@ -9060,32 +9175,12 @@ class RPPPB extends peripheral_1.BasePeripheral {
                 return;
             // SysTick
             case SYST_CSR:
-                {
-                    const prevInterrupt = this.systickControl === 0x7;
-                    const interrupt = value === 0x7;
-                    if (interrupt && !prevInterrupt) {
-                        // TODO: adjust the timer based on the current systick value
-                        const systickCallback = () => {
-                            core.pendingSystick = true;
-                            core.interruptsUpdated = true;
-                            if (core.waiting && core.checkForInterrupts()) {
-                                core.waiting = false;
-                            }
-                            this.systickTimer = rp2040.clock.createTimer(this.systickReload + 1, systickCallback);
-                        };
-                        this.systickTimer = rp2040.clock.createTimer(this.systickReload + 1, systickCallback);
-                    }
-                    if (prevInterrupt && interrupt) {
-                        if (this.systickTimer) {
-                            rp2040.clock.deleteTimer(this.systickTimer);
-                        }
-                        this.systickTimer = null;
-                    }
-                    this.systickControl = value & 0x7;
-                }
+                this.systickClkSource = value & (1 << 2) ? true : false;
+                this.systickIntEnable = value & (1 << 1) ? true : false;
+                this.systickTimer.enable = value & (1 << 0) ? true : false;
                 return;
             case SYST_CVR:
-                this.warn(`SYSTICK CVR: not implemented yet, value=${value}`);
+                this.systickTimer.set(0);
                 return;
             case SYST_RVR:
                 this.systickReload = value;
@@ -10602,6 +10697,7 @@ const cortex_m0_core_1 = __nccwpck_require__(4407);
 const gpio_pin_1 = __nccwpck_require__(1810);
 const irq_1 = __nccwpck_require__(679);
 const adc_1 = __nccwpck_require__(5826);
+const busctrl_1 = __nccwpck_require__(6988);
 const clocks_1 = __nccwpck_require__(2135);
 const dma_1 = __nccwpck_require__(1253);
 const i2c_1 = __nccwpck_require__(8563);
@@ -10617,12 +10713,12 @@ const spi_1 = __nccwpck_require__(5360);
 const ssi_1 = __nccwpck_require__(5160);
 const syscfg_1 = __nccwpck_require__(6197);
 const sysinfo_1 = __nccwpck_require__(4632);
+const tbman_1 = __nccwpck_require__(5591);
 const timer_1 = __nccwpck_require__(1993);
 const uart_1 = __nccwpck_require__(4753);
 const usb_1 = __nccwpck_require__(5626);
 const sio_1 = __nccwpck_require__(7918);
 const logging_1 = __nccwpck_require__(6057);
-const tbman_1 = __nccwpck_require__(5591);
 exports.FLASH_START_ADDRESS = 0x10000000;
 exports.RAM_START_ADDRESS = 0x20000000;
 exports.APB_START_ADDRESS = 0x40000000;
@@ -10717,7 +10813,7 @@ class RP2040 {
             0x40024: new peripheral_1.UnimplementedPeripheral(this, 'XOSC_BASE'),
             0x40028: new peripheral_1.UnimplementedPeripheral(this, 'PLL_SYS_BASE'),
             0x4002c: new peripheral_1.UnimplementedPeripheral(this, 'PLL_USB_BASE'),
-            0x40030: new peripheral_1.UnimplementedPeripheral(this, 'BUSCTRL_BASE'),
+            0x40030: new busctrl_1.RPBUSCTRL(this, 'BUSCTRL_BASE'),
             0x40034: this.uart[0],
             0x40038: this.uart[1],
             0x4003c: this.spi[0],
@@ -12003,7 +12099,7 @@ class Timer32PeriodicAlarm {
             }
         }
         if (mode === TimerMode.Decrement) {
-            cycleDelta = top - cycleDelta;
+            cycleDelta = top + 1 - cycleDelta;
         }
         const cyclesToAlarm = cycleDelta >>> 0;
         const microsToAlarm = timer.toMicros(cyclesToAlarm);
