@@ -4714,13 +4714,12 @@ class CortexM0Core {
             const Rm = (opcode >> 3) & 0x7;
             const Rd = opcode & 0x7;
             const input = this.registers[Rm];
-            const result = imm5 ? input >> imm5 : (input & 0x80000000) >> 31;
+            const shiftN = imm5 ? imm5 : 32;
+            const result = shiftN < 32 ? input >> shiftN : (input & 0x80000000) >> 31;
             this.registers[Rd] = result;
             this.N = !!(result & 0x80000000);
             this.Z = (result & 0xffffffff) === 0;
-            if (imm5) {
-                this.C = input & (1 << (imm5 - 1)) ? true : false;
-            }
+            this.C = input & (1 << (shiftN - 1)) ? true : false;
         }
         // ASRS (register)
         else if (opcode >> 6 === 0b0100000100) {
@@ -4732,9 +4731,7 @@ class CortexM0Core {
             this.registers[Rdn] = result;
             this.N = !!(result & 0x80000000);
             this.Z = (result & 0xffffffff) === 0;
-            if (shiftN) {
-                this.C = input & (1 << (shiftN - 1)) ? true : false;
-            }
+            this.C = input & (1 << (shiftN - 1)) ? true : false;
         }
         // B (with cond)
         else if (opcode >> 12 === 0b1101 && ((opcode >> 9) & 0x7) !== 0b111) {
@@ -10250,6 +10247,7 @@ exports.RPTimer = RPTimer;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RPUART = void 0;
 const fifo_1 = __nccwpck_require__(4677);
+const dma_1 = __nccwpck_require__(1253);
 const peripheral_1 = __nccwpck_require__(4223);
 const UARTDR = 0x0;
 const UARTFR = 0x18;
@@ -10272,14 +10270,17 @@ const UARTEN = 1 << 0;
 // Interrupt bits
 const UARTRXINTR = 1 << 4;
 class RPUART extends peripheral_1.BasePeripheral {
-    constructor(rp2040, name, irq) {
+    constructor(rp2040, name, index, irq) {
         super(rp2040, name);
+        this.index = index;
         this.irq = irq;
         this.ctrlRegister = RXE | TXE;
         this.lineCtrlRegister = 0;
         this.rxFIFO = new fifo_1.FIFO(32);
         this.interruptMask = 0;
         this.interruptStatus = 0;
+        this.rxDREQ = this.index == 0 ? dma_1.DREQChannel.DREQ_UART0_RX : dma_1.DREQChannel.DREQ_UART1_RX;
+        this.txDREQ = this.index == 0 ? dma_1.DREQChannel.DREQ_UART0_TX : dma_1.DREQChannel.DREQ_UART1_TX;
     }
     get enabled() {
         return !!(this.ctrlRegister & UARTEN);
@@ -10356,6 +10357,12 @@ class RPUART extends peripheral_1.BasePeripheral {
                 break;
             case UARTCR:
                 this.ctrlRegister = value;
+                if (this.enabled) {
+                    this.rp2040.dma.setDREQ(this.txDREQ);
+                }
+                else {
+                    this.rp2040.dma.clearDREQ(this.txDREQ);
+                }
                 break;
             case UARTIMSC:
                 this.interruptMask = value & 0x7ff;
@@ -10752,7 +10759,10 @@ class RP2040 {
         this.clkPeri = 125 * MHz;
         this.ppb = new ppb_1.RPPPB(this, 'PPB');
         this.sio = new sio_1.RPSIO(this);
-        this.uart = [new uart_1.RPUART(this, 'UART0', irq_1.IRQ.UART0), new uart_1.RPUART(this, 'UART1', irq_1.IRQ.UART1)];
+        this.uart = [
+            new uart_1.RPUART(this, 'UART0', 0, irq_1.IRQ.UART0),
+            new uart_1.RPUART(this, 'UART1', 1, irq_1.IRQ.UART1),
+        ];
         this.i2c = [new i2c_1.RPI2C(this, 'I2C0', irq_1.IRQ.I2C0), new i2c_1.RPI2C(this, 'I2C1', irq_1.IRQ.I2C1)];
         this.spi = [new spi_1.RPSPI(this, 'SPI0', irq_1.IRQ.SPI0), new spi_1.RPSPI(this, 'SPI1', irq_1.IRQ.SPI1)];
         this.pwm = new pwm_1.RPPWM(this, 'PWM_BASE');
