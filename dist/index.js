@@ -15139,6 +15139,9 @@ function httpRedirectFetch (fetchParams, response) {
     // https://fetch.spec.whatwg.org/#cors-non-wildcard-request-header-name
     request.headersList.delete('authorization')
 
+    // https://fetch.spec.whatwg.org/#authentication-entries
+    request.headersList.delete('proxy-authorization', true)
+
     // "Cookie" and "Host" are forbidden request-headers, which undici doesn't implement.
     request.headersList.delete('cookie')
     request.headersList.delete('host')
@@ -34762,7 +34765,7 @@ exports.RPWatchdog = RPWatchdog;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.RP2040 = exports.SIO_START_ADDRESS = exports.DPRAM_START_ADDRESS = exports.APB_START_ADDRESS = exports.RAM_START_ADDRESS = exports.FLASH_START_ADDRESS = void 0;
+exports.RP2040 = exports.SIO_START_ADDRESS = exports.DPRAM_START_ADDRESS = exports.APB_START_ADDRESS = exports.RAM_START_ADDRESS = exports.FLASH_END_ADDRESS = exports.FLASH_START_ADDRESS = void 0;
 const realtime_clock_js_1 = __nccwpck_require__(5938);
 const cortex_m0_core_js_1 = __nccwpck_require__(4407);
 const gpio_pin_js_1 = __nccwpck_require__(1810);
@@ -34792,6 +34795,7 @@ const watchdog_js_1 = __nccwpck_require__(2881);
 const sio_js_1 = __nccwpck_require__(7918);
 const logging_js_1 = __nccwpck_require__(6057);
 exports.FLASH_START_ADDRESS = 0x10000000;
+exports.FLASH_END_ADDRESS = 0x14000000;
 exports.RAM_START_ADDRESS = 0x20000000;
 exports.APB_START_ADDRESS = 0x40000000;
 exports.DPRAM_START_ADDRESS = 0x50100000;
@@ -34950,9 +34954,14 @@ class RP2040 {
         if (address < bootrom.length * 4) {
             return bootrom[address / 4];
         }
-        else if (address >= exports.FLASH_START_ADDRESS &&
-            address < exports.FLASH_START_ADDRESS + this.flash.length) {
-            return this.flashView.getUint32(address - exports.FLASH_START_ADDRESS, true);
+        else if (address >= exports.FLASH_START_ADDRESS && address < exports.FLASH_END_ADDRESS) {
+            // Flash is mirrored four times:
+            // - 0x10000000 XIP
+            // - 0x11000000 XIP_NOALLOC
+            // - 0x12000000 XIP_NOCACHE
+            // - 0x13000000 XIP_NOCACHE_NOALLOC
+            const offset = address & 16777215;
+            return this.flashView.getUint32(offset, true);
         }
         else if (address >= exports.RAM_START_ADDRESS && address < exports.RAM_START_ADDRESS + this.sram.length) {
             return this.sramView.getUint32(address - exports.RAM_START_ADDRESS, true);
